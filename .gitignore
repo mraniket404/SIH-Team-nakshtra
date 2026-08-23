@@ -1,53 +1,101 @@
-# Dependencies
-node_modules/
-__pycache__/
-*.py[cod]
+# ==========================================
+# SatQuery AI - Git Ignore
+# ==========================================
 
-# Environment
+# ---------- Environment ----------
 .env
 .env.*
 !.env.example
 
-# Python
-.venv/
-venv/
+# ---------- Node ----------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# ---------- Frontend ----------
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.vite/
+
+# ---------- Backend ----------
+backend/node_modules/
+backend/dist/
+backend/logs/
+
+# ---------- Python ----------
+ml/venv/
+ml/.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ---------- Python cache ----------
 .pytest_cache/
 .mypy_cache/
+.ruff_cache/
 
-# Build
-dist/
-build/
-coverage/
+# ---------- Jupyter ----------
+.ipynb_checkpoints/
 
-# ML
-*.pt
-*.pth
-*.ckpt
-*.safetensors
-*.onnx
+# ---------- Uploaded Satellite Data ----------
+backend/uploads/*
+!backend/uploads/.gitkeep
 
-# Satellite / large datasets
-data/raw/
-data/processed/
-data/evaluation/
+# ---------- ML Generated Outputs ----------
+ml/outputs/*
+!ml/outputs/.gitkeep
 
-# Generated outputs
-outputs/
-reports/generated/
-checkpoints/
+# ---------- Generated Raster Files ----------
+*.tif
+*.tiff
+*.geotiff
 
-# Logs
+# ---------- Generated Images ----------
+*.png
+*.jpg
+*.jpeg
+
+# ---------- Reports ----------
+*.pdf
+
+# ---------- Temporary Files ----------
+*.tmp
+*.temp
 *.log
-logs/
 
-# OS
+# ---------- OS ----------
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# IDE
+# ---------- VS Code ----------
 .vscode/
-.idea/
+!.vscode/settings.json
 
-# Temporary
-tmp/
-temp/
+# ---------- IntelliJ / JetBrains ----------
+.idea/
+*.iml
+
+# ---------- Windows ----------
+*.lnk
+
+
+# ==========================================
+# Satellite / ML datasets and raw products
+# ==========================================
+
+ml/*.zip
+ml/*.tar.gz
+ml/*.csv
+ml/*.parquet
+ml/*token*.txt
+
+# Sentinel satellite product
+ml/sentinel_product/
+
+# Downloaded datasets / archives
+ml/data/
+ml/datasets/
+ml/raw/
