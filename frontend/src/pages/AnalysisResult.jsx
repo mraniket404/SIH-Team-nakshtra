@@ -315,9 +315,19 @@ function AnalysisResult() {
    * http://localhost:5000
    */
 
-  const ndviPreviewUrl = ndvi
-  ? `${BACKEND_BASE_URL}/uploads/ndvi/ndvi_preview.png`
-  : null;
+  const ndviPreviewUrl =
+    analysis.inputType === "ndvi" && ndvi
+      ? (
+          ndvi.preview_url
+            ? (
+                ndvi.preview_url.startsWith("http://") ||
+                ndvi.preview_url.startsWith("https://")
+              )
+                ? ndvi.preview_url
+                : `${BACKEND_BASE_URL}${ndvi.preview_url}`
+            : `${BACKEND_BASE_URL}/uploads/ndvi/ndvi_preview.png`
+        )
+      : null;
 
 
   /* =================================================
@@ -627,7 +637,7 @@ function AnalysisResult() {
           NDVI RESULT
       ================================================= */}
 
-      {ndvi && (
+      {analysis.inputType === "ndvi" && ndvi && (
 
         <section className="mt-6 rounded-3xl border border-emerald-400/10 bg-emerald-400/[0.025] p-6">
 
