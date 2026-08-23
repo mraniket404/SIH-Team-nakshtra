@@ -1,8 +1,12 @@
-import { Routes, Route } from "react-router-dom";
+import {
+  Routes,
+  Route,
+} from "react-router-dom";
 
 import Landing from "../pages/Landing";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
+
 import Dashboard from "../pages/Dashboard";
 import NewAnalysis from "../pages/NewAnalysis";
 import AnalysisWorkspace from "../pages/AnalysisWorkspace";
@@ -15,60 +19,75 @@ import Settings from "../pages/Settings";
 
 import MainLayout from "../components/layout/MainLayout";
 
+import ProtectedRoute from "./ProtectedRoute";
+
 function AppRouter() {
   return (
     <Routes>
-      <Route path="/" element={<Landing />} />
+      <Route
+        path="/"
+        element={<Landing />}
+      />
 
-      <Route path="/login" element={<Login />} />
+      <Route
+        path="/login"
+        element={<Login />}
+      />
 
-      <Route path="/register" element={<Register />} />
+      <Route
+        path="/register"
+        element={<Register />}
+      />
 
-      <Route element={<MainLayout />}>
+      <Route element={<ProtectedRoute />}>
         <Route
-          path="/dashboard"
-          element={<Dashboard />}
-        />
+          element={<MainLayout />}
+        >
+          <Route
+            path="/dashboard"
+            element={<Dashboard />}
+          />
 
-        <Route
-          path="/analysis/new"
-          element={<NewAnalysis />}
-        />
+          <Route
+            path="/analysis/new"
+            element={<NewAnalysis />}
+          />
 
-        <Route
-          path="/analysis/workspace"
-          element={<AnalysisWorkspace />}
-        />
+          <Route
+            path="/analysis/workspace"
+            element={<AnalysisWorkspace />}
+          />
 
-        <Route
-          path="/analysis/:id"
-          element={<AnalysisResult />}
-        />
+          <Route
+            path="/analysis/:id"
+            element={<AnalysisResult />}
+          />
 
-        <Route
-          path="/projects"
-          element={<Projects />}
-        />
+          <Route
+            path="/projects"
+            element={<Projects />}
+          />
 
-        <Route
-          path="/history"
-          element={<History />}
-        />
+          <Route
+            path="/history"
+            element={<History />}
+          />
 
-        <Route
-          path="/models"
-          element={<Models />}
-        />
+          <Route
+            path="/models"
+            element={<Models />}
+          />
 
-        <Route
-          path="/reports"
-          element={<Reports />}
-        />
+          <Route
+            path="/reports"
+            element={<Reports />}
+          />
 
-        <Route
-          path="/settings"
-          element={<Settings />}
-        />
+          <Route
+            path="/settings"
+            element={<Settings />}
+          />
+        </Route>
       </Route>
     </Routes>
   );
