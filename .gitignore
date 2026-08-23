@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.py[cod]
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# Build
+dist/
+build/
+coverage/
+
+# ML
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
+
+# Satellite / large datasets
+data/raw/
+data/processed/
+data/evaluation/
+
+# Generated outputs
+outputs/
+reports/generated/
+checkpoints/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Temporary
+tmp/
+temp/
