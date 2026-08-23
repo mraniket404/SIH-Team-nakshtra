@@ -2,21 +2,37 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 
-const uploadDirectory = path.join(
-  process.cwd(),
-  "uploads"
-);
 
-if (!fs.existsSync(uploadDirectory)) {
-  fs.mkdirSync(uploadDirectory, {
-    recursive: true,
-  });
+/* =====================================================
+   UPLOAD DIRECTORY
+===================================================== */
+
+const uploadDirectory =
+  path.join(
+    process.cwd(),
+    "uploads"
+  );
+
+
+if (
+  !fs.existsSync(
+    uploadDirectory
+  )
+) {
+
+  fs.mkdirSync(
+    uploadDirectory,
+    {
+      recursive: true,
+    }
+  );
+
 }
 
 
-/* =========================
+/* =====================================================
    STORAGE
-========================= */
+===================================================== */
 
 const storage =
   multer.diskStorage({
@@ -31,7 +47,9 @@ const storage =
         null,
         uploadDirectory
       );
+
     },
+
 
     filename: (
       req,
@@ -46,26 +64,33 @@ const storage =
           )
           .toLowerCase();
 
+
       const uniqueName =
         `${Date.now()}-${Math.round(
           Math.random() * 1e9
         )}${extension}`;
 
+
       cb(
         null,
         uniqueName
       );
+
     },
+
   });
 
 
-/* =========================
+/* =====================================================
    ALLOWED FILE TYPES
-========================= */
+===================================================== */
 
 const allowedExtensions = [
+
   ".tif",
+
   ".tiff",
+
 ];
 
 
@@ -94,6 +119,7 @@ const fileFilter = (
         "Only GeoTIFF/TIFF files are supported for satellite imagery."
       )
     );
+
   }
 
 
@@ -101,12 +127,13 @@ const fileFilter = (
     null,
     true
   );
+
 };
 
 
-/* =========================
+/* =====================================================
    MULTER
-========================= */
+===================================================== */
 
 const upload =
   multer({
@@ -117,15 +144,37 @@ const upload =
 
     limits: {
 
-      // 1 GB per file
+      /*
+       * Maximum size of ONE file
+       * 1 GB
+       */
+
       fileSize:
         1024 *
         1024 *
         1024,
 
-      // Maximum 2 satellite files
-      files: 2,
+
+      /*
+       * Maximum number of files
+       *
+       * NDVI:
+       *   2 files
+       *
+       * Bi-Temporal:
+       *   4 files
+       *
+       * Cross-modal:
+       *   2 files
+       *
+       * Future analyses:
+       *   up to 20 files
+       */
+
+      files: 20,
+
     },
+
   });
 
 

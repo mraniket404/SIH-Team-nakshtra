@@ -1,6 +1,5 @@
 const axios = require("axios");
 
-
 const ML_SERVICE_URL =
   process.env.ML_SERVICE_URL ||
   "http://127.0.0.1:8000";
@@ -27,7 +26,6 @@ const inspectRaster = async (
       }
     );
 
-
   return response.data;
 };
 
@@ -49,7 +47,6 @@ const calculateNDVI = async (
     );
 
   }
-
 
   const response =
     await axios.post(
@@ -73,6 +70,70 @@ const calculateNDVI = async (
       }
     );
 
+  return response.data;
+};
+
+
+/* =====================================================
+   CALCULATE BI-TEMPORAL CHANGE
+===================================================== */
+
+const calculateBitemporalChange = async (
+  earlierFilePath,
+  laterFilePath,
+  analysisId,
+  threshold = 0.10
+) => {
+
+  if (!earlierFilePath) {
+
+    throw new Error(
+      "Earlier raster file path is required."
+    );
+
+  }
+
+  if (!laterFilePath) {
+
+    throw new Error(
+      "Later raster file path is required."
+    );
+
+  }
+
+  if (!analysisId) {
+
+    throw new Error(
+      "Analysis ID is required for "
+      + "bi-temporal change detection."
+    );
+
+  }
+
+  const response =
+    await axios.post(
+      `${ML_SERVICE_URL}/raster/change`,
+      null,
+      {
+        params: {
+
+          earlier_file_path:
+            earlierFilePath,
+
+          later_file_path:
+            laterFilePath,
+
+          analysis_id:
+            analysisId,
+
+          threshold:
+            threshold,
+
+        },
+
+        timeout: 300000,
+      }
+    );
 
   return response.data;
 };
@@ -83,6 +144,11 @@ const calculateNDVI = async (
 ===================================================== */
 
 module.exports = {
+
   inspectRaster,
+
   calculateNDVI,
+
+  calculateBitemporalChange,
+
 };

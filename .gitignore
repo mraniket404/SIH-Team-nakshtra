@@ -99,3 +99,8 @@ ml/sentinel_product/
 ml/data/
 ml/datasets/
 ml/raw/
+ml/test_data/
+*.tif
+*.tiff
+*.jp2
+cdse_token.txt

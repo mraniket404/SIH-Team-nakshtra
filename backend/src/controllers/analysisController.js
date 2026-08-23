@@ -7,6 +7,7 @@ const Project = require("../models/Project");
 const {
   inspectRaster,
   calculateNDVI,
+  calculateBitemporalChange,
 } = require("../services/mlService");
 
 
@@ -15,75 +16,94 @@ const {
 ===================================================== */
 
 const detectBandInfo = (filename = "") => {
-  const name = filename.toUpperCase();
+
+  const name =
+    filename.toUpperCase();
+
 
   const bandPatterns = [
+
     {
       band: "B02",
       role: "Blue",
       modality: "multispectral",
     },
+
     {
       band: "B03",
       role: "Green",
       modality: "multispectral",
     },
+
     {
       band: "B04",
       role: "Red",
       modality: "multispectral",
     },
+
     {
       band: "B05",
       role: "Red Edge 1",
       modality: "multispectral",
     },
+
     {
       band: "B06",
       role: "Red Edge 2",
       modality: "multispectral",
     },
+
     {
       band: "B07",
       role: "Red Edge 3",
       modality: "multispectral",
     },
+
     {
       band: "B08",
       role: "NIR",
       modality: "multispectral",
     },
+
     {
       band: "B8A",
       role: "NIR Narrow",
       modality: "multispectral",
     },
+
     {
       band: "B09",
       role: "Water Vapour",
       modality: "multispectral",
     },
+
     {
       band: "B11",
       role: "SWIR 1",
       modality: "multispectral",
     },
+
     {
       band: "B12",
       role: "SWIR 2",
       modality: "multispectral",
     },
+
   ];
 
+
   for (const item of bandPatterns) {
+
     if (
       name.includes(`_${item.band}_`) ||
       name.includes(`_${item.band}.`) ||
       name.endsWith(`_${item.band}`)
     ) {
+
       return item;
     }
   }
+
 
   return {
     band: "",
@@ -94,15 +114,45 @@ const detectBandInfo = (filename = "") => {
 
 
 /* =====================================================
+   YEAR DETECTION
+===================================================== */
+
+const detectYear = (filename = "") => {
+
+  const match =
+    filename.match(
+      /(19|20)\d{2}/
+    );
+
+
+  if (!match) {
+    return null;
+  }
+
+
+  return Number(
+    match[0]
+  );
+};
+
+
+/* =====================================================
    CREATE ANALYSIS
 ===================================================== */
 
-const createAnalysis = async (req, res) => {
-  const uploadedFiles = req.files || [];
+const createAnalysis = async (
+  req,
+  res
+) => {
+
+  const uploadedFiles =
+    req.files || [];
 
   let createdAnalysis = null;
 
+
   try {
+
     const {
       projectId,
       inputType,
@@ -120,26 +170,37 @@ const createAnalysis = async (req, res) => {
         projectId
       )
     ) {
+
       return res.status(400).json({
+
         success: false,
+
         message:
           "Valid projectId is required.",
+
       });
     }
 
 
     const project =
       await Project.findOne({
+
         _id: projectId,
+
         owner: req.user._id,
+
       });
 
 
     if (!project) {
+
       return res.status(404).json({
+
         success: false,
+
         message:
           "Project not found.",
+
       });
     }
 
@@ -149,10 +210,15 @@ const createAnalysis = async (req, res) => {
     ================================================= */
 
     const allowedInputTypes = [
+
       "single",
+
       "cross-modal",
+
       "bi-temporal",
+
       "ndvi",
+
     ];
 
 
@@ -161,37 +227,53 @@ const createAnalysis = async (req, res) => {
         inputType
       )
     ) {
+
       return res.status(400).json({
+
         success: false,
+
         message:
           "Invalid analysis input type.",
+
       });
     }
 
 
     /* =================================================
-       FILE VALIDATION
+       FILE EXISTENCE
     ================================================= */
 
     if (
       uploadedFiles.length === 0
     ) {
+
       return res.status(400).json({
+
         success: false,
+
         message:
           "At least one satellite image is required.",
+
       });
     }
 
+
+    /* =================================================
+       FILE COUNT VALIDATION
+    ================================================= */
 
     if (
       inputType === "single" &&
       uploadedFiles.length !== 1
     ) {
+
       return res.status(400).json({
+
         success: false,
+
         message:
           "Single image analysis requires exactly one image.",
+
       });
     }
 
@@ -200,22 +282,41 @@ const createAnalysis = async (req, res) => {
       inputType === "cross-modal" &&
       uploadedFiles.length !== 2
     ) {
+
       return res.status(400).json({
+
         success: false,
+
         message:
           "Cross-modal analysis requires exactly two images.",
+
       });
     }
 
 
+    /*
+      IMPORTANT:
+
+      Bi-temporal now requires:
+
+      2017 B04
+      2017 B08
+      2024 B04
+      2024 B08
+    */
+
     if (
       inputType === "bi-temporal" &&
-      uploadedFiles.length !== 2
+      uploadedFiles.length !== 4
     ) {
+
       return res.status(400).json({
+
         success: false,
+
         message:
-          "Bi-temporal analysis requires exactly two images.",
+          "Bi-temporal analysis requires exactly 4 images: 2017 B04, 2017 B08, 2024 B04 and 2024 B08.",
+
       });
     }
 
@@ -224,16 +325,20 @@ const createAnalysis = async (req, res) => {
       inputType === "ndvi" &&
       uploadedFiles.length !== 2
     ) {
+
       return res.status(400).json({
+
         success: false,
+
         message:
           "NDVI analysis requires exactly two images: B04 and B08.",
+
       });
     }
 
 
     /* =================================================
-       BAND DETECTION
+       DETECT BANDS
     ================================================= */
 
     const detectedFiles =
@@ -245,9 +350,21 @@ const createAnalysis = async (req, res) => {
               file.originalname
             );
 
+
+          const year =
+            detectYear(
+              file.originalname
+            );
+
+
           return {
+
             file,
+
             bandInfo,
+
+            year,
+
           };
         }
       );
@@ -258,6 +375,7 @@ const createAnalysis = async (req, res) => {
     ================================================= */
 
     let redFile = null;
+
     let nirFile = null;
 
 
@@ -297,6 +415,7 @@ const createAnalysis = async (req, res) => {
                 file,
                 bandInfo,
               }) => ({
+
                 fileName:
                   file.originalname,
 
@@ -307,8 +426,106 @@ const createAnalysis = async (req, res) => {
                 role:
                   bandInfo.role ||
                   null,
+
               })
             ),
+
+        });
+      }
+    }
+
+
+    /* =================================================
+       BI-TEMPORAL FILE ORGANIZATION
+    ================================================= */
+
+    let earlierB04 = null;
+    let earlierB08 = null;
+
+    let laterB04 = null;
+    let laterB08 = null;
+
+
+    if (
+      inputType === "bi-temporal"
+    ) {
+
+      /*
+        Find files using BOTH:
+
+        year + band
+      */
+
+      earlierB04 =
+        detectedFiles.find(
+          ({ bandInfo, year }) =>
+            year === 2017 &&
+            bandInfo.band === "B04"
+        )?.file || null;
+
+
+      earlierB08 =
+        detectedFiles.find(
+          ({ bandInfo, year }) =>
+            year === 2017 &&
+            bandInfo.band === "B08"
+        )?.file || null;
+
+
+      laterB04 =
+        detectedFiles.find(
+          ({ bandInfo, year }) =>
+            year === 2024 &&
+            bandInfo.band === "B04"
+        )?.file || null;
+
+
+      laterB08 =
+        detectedFiles.find(
+          ({ bandInfo, year }) =>
+            year === 2024 &&
+            bandInfo.band === "B08"
+        )?.file || null;
+
+
+      if (
+        !earlierB04 ||
+        !earlierB08 ||
+        !laterB04 ||
+        !laterB08
+      ) {
+
+        return res.status(400).json({
+
+          success: false,
+
+          message:
+            "Bi-temporal analysis requires exactly: 2017 B04, 2017 B08, 2024 B04 and 2024 B08.",
+
+          detectedFiles:
+            detectedFiles.map(
+              ({
+                file,
+                bandInfo,
+                year,
+              }) => ({
+
+                fileName:
+                  file.originalname,
+
+                year,
+
+                band:
+                  bandInfo.band ||
+                  null,
+
+                role:
+                  bandInfo.role ||
+                  null,
+
+              })
+            ),
+
         });
       }
     }
@@ -323,6 +540,7 @@ const createAnalysis = async (req, res) => {
         ({
           file,
           bandInfo,
+          year,
         }) => ({
 
           originalName:
@@ -349,6 +567,9 @@ const createAnalysis = async (req, res) => {
 
           role:
             bandInfo.role,
+
+          year,
+
         })
       );
 
@@ -377,10 +598,18 @@ const createAnalysis = async (req, res) => {
         );
 
 
+      const year =
+        detectYear(
+          file.originalname
+        );
+
+
       rasterResults.push({
 
         fileName:
           file.originalname,
+
+        year,
 
         band:
           bandInfo.band,
@@ -392,15 +621,13 @@ const createAnalysis = async (req, res) => {
           bandInfo.modality,
 
         ...result.metadata,
+
       });
     }
 
 
     /* =================================================
-       CREATE ANALYSIS FIRST
-       
-       IMPORTANT:
-       MongoDB generates the analysis ID here.
+       CREATE ANALYSIS
     ================================================= */
 
     createdAnalysis =
@@ -422,7 +649,8 @@ const createAnalysis = async (req, res) => {
             : "",
 
         status:
-          inputType === "ndvi"
+          inputType === "ndvi" ||
+          inputType === "bi-temporal"
             ? "processing"
             : "uploaded",
 
@@ -432,11 +660,14 @@ const createAnalysis = async (req, res) => {
         ndviResult:
           null,
 
+        changeResult:
+          null,
+
       });
 
 
     /* =================================================
-       NDVI PROCESSING
+       NDVI
     ================================================= */
 
     let ndviResult = null;
@@ -458,16 +689,13 @@ const createAnalysis = async (req, res) => {
         );
 
 
-      /* ===============================================
-         UPDATE ANALYSIS WITH NDVI RESULT
-      =============================================== */
-
       createdAnalysis =
         await Analysis.findByIdAndUpdate(
 
           createdAnalysis._id,
 
           {
+
             status:
               "completed",
 
@@ -478,14 +706,160 @@ const createAnalysis = async (req, res) => {
           },
 
           {
+
             new: true,
+
           }
 
         ).populate(
           "project",
           "name location"
         );
+    }
 
+
+    /* =================================================
+       BI-TEMPORAL NDVI + CHANGE DETECTION
+    ================================================= */
+
+    let earlierNDVI = null;
+
+    let laterNDVI = null;
+
+    let changeResult = null;
+
+
+    if (
+      inputType === "bi-temporal"
+    ) {
+
+      /* ===============================================
+         STEP 1
+         Calculate NDVI for 2017
+      =============================================== */
+
+      earlierNDVI =
+        await calculateNDVI(
+
+          earlierB04.path,
+
+          earlierB08.path,
+
+          `${createdAnalysis._id.toString()}_2017`
+
+        );
+
+
+      /* ===============================================
+         STEP 2
+         Calculate NDVI for 2024
+      =============================================== */
+
+      laterNDVI =
+        await calculateNDVI(
+
+          laterB04.path,
+
+          laterB08.path,
+
+          `${createdAnalysis._id.toString()}_2024`
+
+        );
+
+
+      /* ===============================================
+         Extract generated NDVI raster paths
+      =============================================== */
+
+      const earlierAnalysis =
+        earlierNDVI?.analysis ||
+        earlierNDVI;
+
+
+      const laterAnalysis =
+        laterNDVI?.analysis ||
+        laterNDVI;
+
+
+      const earlierNDVIPath =
+        earlierAnalysis?.output_file ||
+        earlierAnalysis?.outputFile;
+
+
+      const laterNDVIPath =
+        laterAnalysis?.output_file ||
+        laterAnalysis?.outputFile;
+
+
+      if (
+        !earlierNDVIPath ||
+        !laterNDVIPath
+      ) {
+
+        throw new Error(
+          "NDVI processing completed but generated raster paths were not returned."
+        );
+      }
+
+
+      /* ===============================================
+         STEP 3
+         Compare 2017 NDVI vs 2024 NDVI
+      =============================================== */
+
+      changeResult =
+        await calculateBitemporalChange(
+
+          earlierNDVIPath,
+
+          laterNDVIPath,
+
+          createdAnalysis._id.toString(),
+
+          0.10
+
+        );
+
+
+      /* ===============================================
+         STEP 4
+         SAVE COMPLETE BI-TEMPORAL RESULT
+      =============================================== */
+
+      createdAnalysis =
+        await Analysis.findByIdAndUpdate(
+
+          createdAnalysis._id,
+
+          {
+
+            status:
+              "completed",
+
+            ndviResult: {
+
+              earlier: earlierAnalysis,
+
+              later: laterAnalysis,
+
+            },
+
+            changeResult:
+              changeResult?.analysis ||
+              changeResult,
+
+          },
+
+          {
+
+            new: true,
+
+          }
+
+        ).populate(
+          "project",
+          "name location"
+        );
     }
 
 
@@ -498,17 +872,33 @@ const createAnalysis = async (req, res) => {
       success: true,
 
       message:
+
         ndviResult
+
           ? "Satellite imagery uploaded and NDVI analysis completed successfully."
-          : "Satellite imagery uploaded and validated successfully.",
+
+          : changeResult
+
+            ? "Satellite imagery uploaded and bi-temporal vegetation change analysis completed successfully."
+
+            : "Satellite imagery uploaded and validated successfully.",
+
 
       analysis:
         createdAnalysis,
 
+
       rasterMetadata:
         rasterResults,
 
+
       ndviResult,
+
+      earlierNDVI,
+
+      laterNDVI,
+
+      changeResult,
 
     });
 
@@ -516,15 +906,20 @@ const createAnalysis = async (req, res) => {
   } catch (error) {
 
     console.error(
+
       "Create analysis error:",
+
       error.response?.data ||
-        error.message ||
-        error
+
+      error.message ||
+
+      error
+
     );
 
 
     /* =================================================
-       MARK ANALYSIS FAILED
+       MARK FAILED
     ================================================= */
 
     if (
@@ -534,16 +929,24 @@ const createAnalysis = async (req, res) => {
       try {
 
         await Analysis.findByIdAndUpdate(
+
           createdAnalysis._id,
+
           {
-            status: "failed",
+
+            status:
+              "failed",
 
             errorMessage:
               error.response?.data
                 ?.detail ||
+
               error.message ||
+
               "Analysis processing failed.",
+
           }
+
         );
 
       } catch (
@@ -551,12 +954,13 @@ const createAnalysis = async (req, res) => {
       ) {
 
         console.error(
+
           "Failed to update analysis status:",
+
           updateError
+
         );
-
       }
-
     }
 
 
@@ -565,7 +969,9 @@ const createAnalysis = async (req, res) => {
     ================================================= */
 
     await Promise.all(
+
       uploadedFiles.map(
+
         async (file) => {
 
           try {
@@ -581,7 +987,9 @@ const createAnalysis = async (req, res) => {
           }
 
         }
+
       )
+
     );
 
 
@@ -607,7 +1015,10 @@ const createAnalysis = async (req, res) => {
 ===================================================== */
 
 const getAnalyses =
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
 
     try {
 
@@ -618,12 +1029,16 @@ const getAnalyses =
             req.user._id,
 
         })
+
           .populate(
             "project",
             "name location"
           )
+
           .sort({
+
             createdAt: -1,
+
           });
 
 
@@ -642,8 +1057,11 @@ const getAnalyses =
     } catch (error) {
 
       console.error(
+
         "Get analyses error:",
+
         error
+
       );
 
 
@@ -665,7 +1083,10 @@ const getAnalyses =
 ===================================================== */
 
 const getAnalysis =
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
 
     try {
 
@@ -700,10 +1121,12 @@ const getAnalysis =
           owner:
             req.user._id,
 
-        }).populate(
-          "project",
-          "name location"
-        );
+        })
+
+          .populate(
+            "project",
+            "name location"
+          );
 
 
       if (!analysis) {
@@ -732,8 +1155,11 @@ const getAnalysis =
     } catch (error) {
 
       console.error(
+
         "Get analysis error:",
+
         error
+
       );
 
 
@@ -755,7 +1181,11 @@ const getAnalysis =
 ===================================================== */
 
 module.exports = {
+
   createAnalysis,
+
   getAnalyses,
+
   getAnalysis,
+
 };

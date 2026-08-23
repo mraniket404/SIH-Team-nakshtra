@@ -1,14 +1,3 @@
-const handleSubmit = async (event) => {
-  event.preventDefault();
-
-  console.log("🔥 SUBMIT CLICKED");
-  console.log("projectId:", projectId);
-  console.log("inputType:", inputType);
-  console.log("files:", files);
-  console.log("token exists:", Boolean(token));
-  console.log("query:", query);
-};
-
 import {
   useEffect,
   useState,
@@ -135,7 +124,7 @@ function NewAnalysis() {
 
           setProjects(
             response.projects ||
-              []
+            []
           );
 
 
@@ -154,7 +143,9 @@ function NewAnalysis() {
           setLoadingProjects(
             false
           );
+
         }
+
       };
 
 
@@ -170,7 +161,50 @@ function NewAnalysis() {
   const expectedFileCount =
     inputType === "single"
       ? 1
-      : 2;
+      : inputType === "ndvi"
+        ? 2
+        : inputType === "bi-temporal"
+          ? 4
+          : 2;
+
+
+  /* =================================================
+     INPUT DESCRIPTION
+  ================================================= */
+
+  const getUploadDescription =
+    () => {
+
+      if (
+        inputType === "single"
+      ) {
+
+        return "1 TIFF file required";
+
+      }
+
+
+      if (
+        inputType === "ndvi"
+      ) {
+
+        return "2 TIFF files required — B04 + B08";
+
+      }
+
+
+      if (
+        inputType === "bi-temporal"
+      ) {
+
+        return "4 TIFF files required — 2017 B04 + B08 and 2024 B04 + B08";
+
+      }
+
+
+      return "2 TIFF files required";
+
+    };
 
 
   /* =================================================
@@ -183,7 +217,7 @@ function NewAnalysis() {
       const selected =
         Array.from(
           event.target.files ||
-            []
+          []
         );
 
 
@@ -240,6 +274,7 @@ function NewAnalysis() {
                 ".tiff"
               )
             );
+
           }
         );
 
@@ -254,6 +289,7 @@ function NewAnalysis() {
         setFiles([]);
 
         return;
+
       }
 
 
@@ -297,13 +333,101 @@ function NewAnalysis() {
           setFiles([]);
 
           return;
+
         }
+
+      }
+
+
+      /* ---------------------------------------------
+         BI-TEMPORAL VALIDATION
+      --------------------------------------------- */
+
+      if (
+        inputType === "bi-temporal" &&
+        selected.length === 4
+      ) {
+
+        const upperNames =
+          selected.map(
+            (file) =>
+              file.name.toUpperCase()
+          );
+
+
+        const has2017 =
+          upperNames.some(
+            (name) =>
+              name.includes("2017")
+          );
+
+
+        const has2024 =
+          upperNames.some(
+            (name) =>
+              name.includes("2024")
+          );
+
+
+        const has2017B04 =
+          upperNames.some(
+            (name) =>
+              name.includes("2017") &&
+              name.includes("B04")
+          );
+
+
+        const has2017B08 =
+          upperNames.some(
+            (name) =>
+              name.includes("2017") &&
+              name.includes("B08")
+          );
+
+
+        const has2024B04 =
+          upperNames.some(
+            (name) =>
+              name.includes("2024") &&
+              name.includes("B04")
+          );
+
+
+        const has2024B08 =
+          upperNames.some(
+            (name) =>
+              name.includes("2024") &&
+              name.includes("B08")
+          );
+
+
+        if (
+          !has2017 ||
+          !has2024 ||
+          !has2017B04 ||
+          !has2017B08 ||
+          !has2024B04 ||
+          !has2024B08
+        ) {
+
+          setError(
+            "Bi-temporal requires: 2017 B04, 2017 B08, 2024 B04 and 2024 B08."
+          );
+
+
+          setFiles([]);
+
+          return;
+
+        }
+
       }
 
 
       setFiles(
         selected
       );
+
     };
 
 
@@ -318,11 +442,13 @@ function NewAnalysis() {
         value
       );
 
+
       setFiles([]);
 
       setError("");
 
       setProgress(0);
+
     };
 
 
@@ -349,6 +475,7 @@ function NewAnalysis() {
         );
 
         return;
+
       }
 
 
@@ -363,6 +490,7 @@ function NewAnalysis() {
         );
 
         return;
+
       }
 
 
@@ -384,11 +512,12 @@ function NewAnalysis() {
         );
 
         return;
+
       }
 
 
       /* ---------------------------------------------
-         NDVI B04/B08
+         NDVI
       --------------------------------------------- */
 
       if (
@@ -423,7 +552,84 @@ function NewAnalysis() {
           );
 
           return;
+
         }
+
+      }
+
+
+      /* ---------------------------------------------
+         BI-TEMPORAL
+      --------------------------------------------- */
+
+      if (
+        inputType === "bi-temporal"
+      ) {
+
+        const upperNames =
+          files.map(
+            (file) =>
+              file.name.toUpperCase()
+          );
+
+
+        const requiredFiles = [
+
+          "2017_B04",
+
+          "2017_B08",
+
+          "2024_B04",
+
+          "2024_B08",
+
+        ];
+
+
+        const missing =
+          requiredFiles.filter(
+            (required) => {
+
+              return !upperNames.some(
+                (name) => {
+
+                  const [
+                    year,
+                    band,
+                  ] =
+                    required.split(
+                      "_"
+                    );
+
+
+                  return (
+                    name.includes(
+                      year
+                    ) &&
+                    name.includes(
+                      band
+                    )
+                  );
+
+                }
+              );
+
+            }
+          );
+
+
+        if (
+          missing.length > 0
+        ) {
+
+          setError(
+            `Missing required files: ${missing.join(", ")}`
+          );
+
+          return;
+
+        }
+
       }
 
 
@@ -469,8 +675,11 @@ function NewAnalysis() {
                   setProgress(
                     percentage
                   );
+
                 }
+
               },
+
           });
 
 
@@ -488,6 +697,7 @@ function NewAnalysis() {
           );
 
           return;
+
         }
 
 
@@ -511,7 +721,9 @@ function NewAnalysis() {
         setSubmitting(
           false
         );
+
       }
+
     };
 
 
@@ -600,6 +812,7 @@ function NewAnalysis() {
             }
 
             className="mt-5 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/50"
+
           >
 
             <option value="">
@@ -781,7 +994,7 @@ function NewAnalysis() {
 
 
               <p className="mt-2 text-xs leading-5 text-slate-600">
-                Two corresponding observations from different times.
+                Compare vegetation between two dates using B04 + B08.
               </p>
 
             </button>
@@ -862,6 +1075,26 @@ function NewAnalysis() {
           )}
 
 
+          {inputType ===
+            "bi-temporal" && (
+
+            <div className="mt-3 rounded-xl border border-cyan-400/10 bg-cyan-400/[0.03] p-4">
+
+              <p className="text-xs font-medium text-cyan-300">
+                Bi-Temporal Dataset
+              </p>
+
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                Upload all four bands:
+                2017 B04, 2017 B08,
+                2024 B04 and 2024 B08.
+              </p>
+
+            </div>
+
+          )}
+
+
           <label className="mt-5 flex min-h-52 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-slate-950/40 px-6 text-center transition hover:border-cyan-400/30 hover:bg-cyan-400/[0.02]">
 
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-400/10 text-xl text-cyan-400">
@@ -874,13 +1107,8 @@ function NewAnalysis() {
             </p>
 
 
-            <p className="mt-2 text-xs text-slate-600">
-
-              {expectedFileCount ===
-              1
-                ? "1 TIFF file required"
-                : "2 TIFF files required"}
-
+            <p className="mt-2 max-w-xl text-xs leading-5 text-slate-600">
+              {getUploadDescription()}
             </p>
 
 
@@ -994,11 +1222,19 @@ function NewAnalysis() {
             placeholder={
               inputType ===
               "ndvi"
+
                 ? "Example: Calculate vegetation health and summarize NDVI statistics."
-                : "Example: Describe the land-cover and major objects visible in this image."
+
+                : inputType ===
+                  "bi-temporal"
+
+                  ? "Example: Compare vegetation between 2017 and 2024 and identify vegetation increase, decrease and stable areas."
+
+                  : "Example: Describe the land-cover and major objects visible in this image."
             }
 
             className="mt-5 w-full resize-none rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-slate-700 focus:border-cyan-400/50"
+
           />
 
         </section>
@@ -1015,9 +1251,16 @@ function NewAnalysis() {
             <p className="text-sm font-medium">
 
               {inputType ===
-              "ndvi"
+                "ndvi"
+
                 ? "Ready to calculate NDVI"
-                : "Ready to upload"}
+
+                : inputType ===
+                  "bi-temporal"
+
+                  ? "Ready for vegetation change analysis"
+
+                  : "Ready to upload"}
 
             </p>
 
@@ -1025,9 +1268,16 @@ function NewAnalysis() {
             <p className="mt-1 text-xs text-slate-600">
 
               {inputType ===
-              "ndvi"
+                "ndvi"
+
                 ? "B04 and B08 will be processed by the ML service."
-                : "The imagery will be validated by the backend."}
+
+                : inputType ===
+                  "bi-temporal"
+
+                  ? "Both dates will be converted to NDVI and compared to detect vegetation change."
+
+                  : "The imagery will be validated by the backend."}
 
             </p>
 
@@ -1052,10 +1302,18 @@ function NewAnalysis() {
 
             {submitting
               ? `Uploading ${progress}%`
+
               : inputType ===
                 "ndvi"
-              ? "Calculate NDVI"
-              : "Upload Imagery"}
+
+                ? "Calculate NDVI"
+
+                : inputType ===
+                  "bi-temporal"
+
+                  ? "Analyze Vegetation Change"
+
+                  : "Upload Imagery"}
 
           </button>
 

@@ -257,6 +257,18 @@ const analysisSchema =
 
 
       /* =========================
+         BI-TEMPORAL CHANGE RESULT
+      ========================= */
+
+      changeResult: {
+        type:
+          mongoose.Schema.Types.Mixed,
+
+        default: null,
+      },
+
+
+      /* =========================
          GENERAL METADATA
       ========================= */
 

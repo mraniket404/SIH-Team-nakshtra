@@ -400,6 +400,90 @@ function AnalysisResult() {
 
 
   /* =================================================
+     BI-TEMPORAL CHANGE RESULT
+
+     IMPORTANT:
+     Existing standalone NDVI logic above is untouched.
+  ================================================= */
+
+  const changeResult =
+    analysis.changeResult ||
+    null;
+
+  const biTemporalNDVI =
+    analysis.inputType === "bi-temporal"
+      ? analysis.ndviResult || null
+      : null;
+
+  const earlierNDVI =
+    biTemporalNDVI?.earlier ||
+    null;
+
+  const laterNDVI =
+    biTemporalNDVI?.later ||
+    null;
+
+  const changeStatistics =
+    changeResult?.statistics ||
+    null;
+
+  const changeDistribution =
+    changeResult?.change ||
+    null;
+
+  const changeChartData =
+    changeDistribution
+      ? [
+          {
+            name: "Increase",
+            value: Number(
+              changeDistribution
+                .increase_percentage || 0
+            ),
+          },
+          {
+            name: "Decrease",
+            value: Number(
+              changeDistribution
+                .decrease_percentage || 0
+            ),
+          },
+          {
+            name: "Stable",
+            value: Number(
+              changeDistribution
+                .stable_percentage || 0
+            ),
+          },
+        ]
+      : [];
+
+  const changePreviewUrl =
+    changeResult?.preview_url
+      ? (
+          changeResult.preview_url
+            .startsWith("http://") ||
+          changeResult.preview_url
+            .startsWith("https://")
+        )
+        ? changeResult.preview_url
+        : `${BACKEND_BASE_URL}${changeResult.preview_url}`
+      : null;
+
+  const changeOutputUrl =
+    changeResult?.output_url
+      ? (
+          changeResult.output_url
+            .startsWith("http://") ||
+          changeResult.output_url
+            .startsWith("https://")
+        )
+        ? changeResult.output_url
+        : `${BACKEND_BASE_URL}${changeResult.output_url}`
+      : null;
+
+
+  /* =================================================
      RENDER
   ================================================= */
 
@@ -1143,6 +1227,508 @@ function AnalysisResult() {
 
               <p className="mt-2 break-all text-xs text-slate-400">
                 {ndvi.output_file}
+              </p>
+
+            </div>
+
+          )}
+
+        </section>
+
+      )}
+
+
+      {/* =================================================
+          BI-TEMPORAL CHANGE DETECTION
+
+          This is intentionally separate from the existing
+          standalone NDVI section above.
+      ================================================= */}
+
+      {analysis.inputType === "bi-temporal" && (
+
+        <section className="mt-6 rounded-3xl border border-cyan-400/10 bg-cyan-400/[0.025] p-6">
+
+          <div className="flex flex-wrap items-center justify-between gap-3">
+
+            <div>
+
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-400">
+                Bi-Temporal Change Detection
+              </p>
+
+              <h2 className="mt-2 text-lg font-semibold">
+                2017 vs 2024 Vegetation Change
+              </h2>
+
+              <p className="mt-1 text-xs leading-6 text-slate-500">
+                Pixel-wise comparison of the generated NDVI
+                rasters for the earlier and later observations.
+              </p>
+
+            </div>
+
+            <span
+              className={
+                changeResult
+                  ? "rounded-full bg-emerald-400/10 px-3 py-1.5 text-xs font-semibold text-emerald-300"
+                  : "rounded-full bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-amber-300"
+              }
+            >
+              {changeResult
+                ? "Completed"
+                : "Result unavailable"}
+            </span>
+
+          </div>
+
+
+          {changeResult ? (
+
+            <>
+
+              {/* =================================================
+                  PERIOD SUMMARY
+              ================================================= */}
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+
+                <MetadataCard
+                  label="Earlier NDVI"
+                  value={
+                    earlierNDVI?.statistics?.mean !==
+                    undefined
+                      ? Number(
+                          earlierNDVI.statistics.mean
+                        ).toFixed(4)
+                      : "—"
+                  }
+                />
+
+                <MetadataCard
+                  label="Later NDVI"
+                  value={
+                    laterNDVI?.statistics?.mean !==
+                    undefined
+                      ? Number(
+                          laterNDVI.statistics.mean
+                        ).toFixed(4)
+                      : "—"
+                  }
+                />
+
+                <MetadataCard
+                  label="Change Threshold"
+                  value={
+                    changeResult.threshold !==
+                    undefined
+                      ? Number(
+                          changeResult.threshold
+                        ).toFixed(2)
+                      : "—"
+                  }
+                />
+
+                <MetadataCard
+                  label="Valid Pixels"
+                  value={formatNumber(
+                    changeResult.valid_pixel_count
+                  )}
+                />
+
+              </div>
+
+
+              {/* =================================================
+                  CHANGE CLASSIFICATION
+              ================================================= */}
+
+              {changeDistribution && (
+
+                <div className="mt-7">
+
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
+                    Vegetation Change Classification
+                  </p>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+
+                    <MetadataCard
+                      label="Vegetation Increase"
+                      value={`${Number(
+                        changeDistribution
+                          .increase_percentage
+                      ).toFixed(2)}%`}
+                    />
+
+                    <MetadataCard
+                      label="Vegetation Decrease"
+                      value={`${Number(
+                        changeDistribution
+                          .decrease_percentage
+                      ).toFixed(2)}%`}
+                    />
+
+                    <MetadataCard
+                      label="Stable Area"
+                      value={`${Number(
+                        changeDistribution
+                          .stable_percentage
+                      ).toFixed(2)}%`}
+                    />
+
+                    <MetadataCard
+                      label="Total Changed"
+                      value={`${Number(
+                        changeDistribution
+                          .changed_percentage
+                      ).toFixed(2)}%`}
+                    />
+
+                  </div>
+
+                </div>
+
+              )}
+
+
+              {/* =================================================
+                  CHANGE MAP
+              ================================================= */}
+
+              <div className="mt-8">
+
+                <div className="rounded-2xl border border-violet-400/10 bg-slate-950/40 p-5">
+
+                  <div className="mb-5">
+
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-400">
+                      Change Visualization
+                    </p>
+
+                    <h3 className="mt-2 text-base font-semibold text-slate-200">
+                      Vegetation Change Map
+                    </h3>
+
+                    <p className="mt-1 text-xs leading-6 text-slate-500">
+                      Generated from the difference between the
+                      earlier and later NDVI rasters.
+                    </p>
+
+                  </div>
+
+
+                  <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/40">
+
+                    {changePreviewUrl ? (
+
+                      <img
+                        src={changePreviewUrl}
+                        alt="Bi-temporal vegetation change visualization"
+                        className="block max-h-[650px] w-full object-contain"
+                        loading="lazy"
+                        onLoad={() => {
+                          console.log(
+                            "Bi-temporal change preview loaded:",
+                            changePreviewUrl
+                          );
+                        }}
+                        onError={(event) => {
+
+                          console.error(
+                            "Bi-temporal change preview failed:",
+                            changePreviewUrl
+                          );
+
+                          event.currentTarget.style.display =
+                            "none";
+
+                        }}
+                      />
+
+                    ) : (
+
+                      <div className="flex min-h-[300px] items-center justify-center">
+
+                        <div className="px-6 text-center">
+
+                          <p className="text-sm font-medium text-slate-400">
+                            Change preview is not available.
+                          </p>
+
+                          <p className="mt-2 text-xs leading-6 text-slate-600">
+                            The change raster was processed, but
+                            the preview URL was not returned.
+                          </p>
+
+                        </div>
+
+                      </div>
+
+                    )}
+
+                  </div>
+
+
+                  {changePreviewUrl && (
+
+                    <div className="mt-4 rounded-xl border border-white/5 bg-white/[0.02] p-3">
+
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-700">
+                        Preview URL
+                      </p>
+
+                      <p className="mt-1 break-all text-xs text-slate-600">
+                        {changePreviewUrl}
+                      </p>
+
+                    </div>
+
+                  )}
+
+                </div>
+
+              </div>
+
+
+              {/* =================================================
+                  CHANGE CHART
+              ================================================= */}
+
+              {changeChartData.length > 0 && (
+
+                <div className="mt-8">
+
+                  <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-5">
+
+                    <div className="mb-5">
+
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-400">
+                        Change Distribution
+                      </p>
+
+                      <h3 className="mt-2 text-base font-semibold text-slate-200">
+                        Increase vs Decrease vs Stable
+                      </h3>
+
+                      <p className="mt-1 text-xs leading-6 text-slate-500">
+                        Percentage of valid pixels classified
+                        using the configured change threshold.
+                      </p>
+
+                    </div>
+
+
+                    <div className="h-72 w-full">
+
+                      <ResponsiveContainer
+                        width="100%"
+                        height="100%"
+                      >
+
+                        <BarChart
+                          data={changeChartData}
+                          margin={{
+                            top: 10,
+                            right: 10,
+                            left: -10,
+                            bottom: 5,
+                          }}
+                        >
+
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                            stroke="rgba(255,255,255,0.08)"
+                          />
+
+                          <XAxis
+                            dataKey="name"
+                            tick={{
+                              fill: "#94a3b8",
+                              fontSize: 11,
+                            }}
+                            axisLine={false}
+                            tickLine={false}
+                          />
+
+                          <YAxis
+                            domain={[
+                              0,
+                              100,
+                            ]}
+                            tick={{
+                              fill: "#94a3b8",
+                              fontSize: 11,
+                            }}
+                            axisLine={false}
+                            tickLine={false}
+                          />
+
+                          <Tooltip
+                            contentStyle={{
+                              background:
+                                "#020617",
+                              border:
+                                "1px solid rgba(255,255,255,0.1)",
+                              borderRadius:
+                                "12px",
+                              color:
+                                "#e2e8f0",
+                            }}
+                            formatter={(value) =>
+                              `${Number(
+                                value
+                              ).toFixed(2)}%`
+                            }
+                          />
+
+                          <Bar
+                            dataKey="value"
+                            fill="#22d3ee"
+                            radius={[
+                              6,
+                              6,
+                              0,
+                              0,
+                            ]}
+                          />
+
+                        </BarChart>
+
+                      </ResponsiveContainer>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+              )}
+
+
+              {/* =================================================
+                  CHANGE STATISTICS
+              ================================================= */}
+
+              {changeStatistics && (
+
+                <div className="mt-8">
+
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
+                    Change Statistics
+                  </p>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+
+                    <MetadataCard
+                      label="Minimum Change"
+                      value={Number(
+                        changeStatistics.min
+                      ).toFixed(4)}
+                    />
+
+                    <MetadataCard
+                      label="Maximum Change"
+                      value={Number(
+                        changeStatistics.max
+                      ).toFixed(4)}
+                    />
+
+                    <MetadataCard
+                      label="Mean Change"
+                      value={Number(
+                        changeStatistics.mean
+                      ).toFixed(4)}
+                    />
+
+                    <MetadataCard
+                      label="Median Change"
+                      value={Number(
+                        changeStatistics.median
+                      ).toFixed(4)}
+                    />
+
+                  </div>
+
+                </div>
+
+              )}
+
+
+              {/* =================================================
+                  RASTER INFORMATION
+              ================================================= */}
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+
+                <MetadataCard
+                  label="Width"
+                  value={formatNumber(
+                    changeResult.dimensions?.width
+                  )}
+                />
+
+                <MetadataCard
+                  label="Height"
+                  value={formatNumber(
+                    changeResult.dimensions?.height
+                  )}
+                />
+
+                <MetadataCard
+                  label="Resolution"
+                  value={
+                    changeResult.resolution
+                      ? `${changeResult.resolution.x} × ${changeResult.resolution.y}`
+                      : "—"
+                  }
+                />
+
+                <MetadataCard
+                  label="CRS"
+                  value={
+                    changeResult.crs ||
+                    "—"
+                  }
+                />
+
+              </div>
+
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+
+                <MetadataCard
+                  label="Changed Pixels"
+                  value={formatNumber(
+                    changeResult.changed_pixel_count
+                  )}
+                />
+
+                <MetadataCard
+                  label="Generated Change Raster"
+                  value={
+                    changeOutputUrl ||
+                    changeResult.output_file ||
+                    "—"
+                  }
+                />
+
+              </div>
+
+            </>
+
+          ) : (
+
+            <div className="mt-6 rounded-2xl border border-amber-400/10 bg-amber-400/[0.03] p-5">
+
+              <p className="text-sm font-medium text-amber-300">
+                Bi-temporal change result is not available.
+              </p>
+
+              <p className="mt-2 text-xs leading-6 text-slate-600">
+                The uploaded imagery may be validated, but the
+                change detection result has not been returned by
+                the processing service.
               </p>
 
             </div>
